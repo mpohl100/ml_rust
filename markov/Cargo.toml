@@ -1,0 +1,17 @@
+[package]
+name = "markov"
+version = "0.1.0"
+edition = "2021"
+description = "The markov part of the project"
+license = "MIT"
+repository = "https://github.com/mpohl100/ml_rust"
+keywords = ["machine-learning", "rust", "markov"]
+categories = ["science", "machine-learning"]
+readme = "../README.md"
+
+[dependencies]
+num-traits = "0.2"
+
+matrix = { path = "../matrix" }
+regret = { path = "../regret" }
+utils = { path = "../utils" }

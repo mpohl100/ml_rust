@@ -78,13 +78,42 @@ pub struct Provider<UserData: UserDataTrait> {
     pub user_data: Option<UserData>,
 }
 
+impl<UserData: UserDataTrait> Provider<UserData> {
+    pub fn new(
+        provider_type: ProviderType<UserData>,
+        user_data: Option<UserData>,
+    ) -> Self {
+        Self { provider_type, user_data }
+    }
+}
+
+#[derive(Clone)]
+pub struct WrappedProvider<UserData: UserDataTrait> {
+    provider: Arc<Mutex<Provider<UserData>>>,
+}
+
+impl<UserData: UserDataTrait> WrappedProvider<UserData> {
+    #[must_use]
+    pub fn new(provider: Provider<UserData>) -> Self {
+        Self { provider: Arc::new(Mutex::new(provider)) }
+    }
+
+    pub fn get_provider_type(&self) -> ProviderType<UserData> {
+        safe_lock(&self.provider).provider_type.clone()
+    }
+
+    pub fn get_user_data(&self) -> Option<UserData> {
+        safe_lock(&self.provider).user_data.clone()
+    }
+}
+
 #[derive(Clone)]
 pub struct RegretNode<UserData: UserDataTrait> {
     probability: f64,
     min_probability: f64,
     current_expected_value: f64,
     parents_data: Vec<UserData>,
-    provider: Provider<UserData>,
+    provider: WrappedProvider<UserData>,
     children: Vec<WrappedRegret<UserData>>,
     regret: f64,
     sum_probabilities: f64,
@@ -101,10 +130,10 @@ impl<UserData: UserDataTrait> RegretNode<UserData> {
         probability: f64,
         min_probability: f64,
         parents_data: Vec<UserData>,
-        provider: &mut Provider<UserData>,
+        provider: WrappedProvider<UserData>,
         fixed_probability: Option<f64>,
     ) -> Self {
-        provider.user_data.as_mut().map_or_else(
+        provider.get_user_data().as_mut().map_or_else(
             || {
                 // If no user data is provided, we set the probability to 0.0
                 UserData::set_probability(
@@ -149,7 +178,7 @@ impl<UserData: UserDataTrait> RegretNode<UserData> {
             self.average_expected_value
         ));
         // then push the provider user_data.get_data_as_string
-        if let Some(data) = self.provider.user_data.as_ref() {
+        if let Some(data) = self.provider.get_user_data().as_ref() {
             // put indentation and newline
             result.push_str(&format!("{}{}\n", " ".repeat(indentation), data.get_data_as_string()));
         }
@@ -211,7 +240,7 @@ impl<UserData: UserDataTrait> RegretNode<UserData> {
         } else {
             self.probability = 0.0;
         }
-        if let Some(data) = self.provider.user_data.as_mut() {
+        if let Some(data) = self.provider.get_user_data().as_mut() {
             data.set_probability(self.probability);
         }
         let total_probability_sum: f64 =
@@ -279,12 +308,12 @@ impl<UserData: UserDataTrait> RegretNode<UserData> {
             return 0.0;
         }
 
-        self.current_expected_value = match self.provider.provider_type {
+        self.current_expected_value = match self.provider.get_provider_type() {
             ProviderType::ExpectedValue(ref provider) => {
                 let mut cloned_parents_data = self.parents_data.clone();
                 cloned_parents_data.extend(
                     self.provider
-                        .user_data
+                        .get_user_data()
                         .as_ref()
                         .map_or_else(|| Vec::new(), |data| vec![data.clone()]),
                 );
@@ -321,10 +350,10 @@ impl<UserData: UserDataTrait> RegretNode<UserData> {
         if !self.children.is_empty() {
             return; // No children to populate
         }
-        match self.provider.provider_type {
+        match self.provider.get_provider_type() {
             ProviderType::Children(ref provider) => {
                 let mut cloned_parents_data = self.parents_data.clone();
-                if let Some(ref user_data) = self.provider.user_data {
+                if let Some(ref user_data) = self.provider.get_user_data() {
                     cloned_parents_data.push(user_data.clone());
                 } else {
                     // If no user data is provided, we just use the parents data
@@ -489,12 +518,12 @@ mod tests {
                             probabilities[i],
                             0.01,
                             parents_data.clone(),
-                            &mut Provider {
-                                provider_type: ProviderType::Children(
-                                    WrappedChildrenProvider::new(Box::new(Self::new())),
-                                ),
-                                user_data: Some(data.clone()),
-                            },
+                            WrappedProvider::new(Provider::new(
+                                ProviderType::Children(WrappedChildrenProvider::new(Box::new(
+                                    Self::new(),
+                                ))),
+                                Some(data.clone()),
+                            )),
                             None,
                         );
                         children.push(WrappedRegret::new(node));
@@ -508,18 +537,17 @@ mod tests {
                     {
                         let data =
                             RoshamboData { choice: choice.clone(), probability: probabilities[i] };
+                        let provider = Provider::new(
+                            ProviderType::ExpectedValue(WrappedExpectedValueProvider::new(
+                                Box::new(RoshamboExpectedValueProvider::new()),
+                            )),
+                            Some(data.clone()),
+                        );
                         let node = RegretNode::new(
                             probabilities[i],
                             0.01,
                             parents_data.clone(),
-                            &mut Provider {
-                                provider_type: ProviderType::ExpectedValue(
-                                    WrappedExpectedValueProvider::new(Box::new(
-                                        RoshamboExpectedValueProvider::new(),
-                                    )),
-                                ),
-                                user_data: Some(data.clone()),
-                            },
+                            WrappedProvider::new(provider),
                             None,
                         );
                         children.push(WrappedRegret::new(node));
@@ -595,12 +623,12 @@ mod tests {
             1.0,
             0.01,
             vec![],
-            &mut Provider {
-                provider_type: ProviderType::Children(WrappedChildrenProvider::new(Box::new(
+            WrappedProvider::new(Provider::new(
+                ProviderType::Children(WrappedChildrenProvider::new(Box::new(
                     RoshamboChildrenProvider {},
                 ))),
-                user_data: None,
-            },
+                None,
+            )),
             Some(1.0),
         );
 

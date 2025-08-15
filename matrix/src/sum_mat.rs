@@ -3,6 +3,7 @@ use crate::mat::{OutOfRangeError, WrappedMatrix};
 use num_traits::NumCast;
 use utils::safer::safe_lock;
 
+#[derive(Clone)]
 pub struct SumMatrix {
     matrix: WrappedMatrix<i64>,
     row_sum: Vec<i64>,
