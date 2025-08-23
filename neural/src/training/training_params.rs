@@ -11,6 +11,7 @@ pub struct TrainingParams {
     tolerance: f64,
     batch_size: usize,
     use_adam: bool,
+    sample_match_percentage: f64,
 }
 
 impl TrainingParams {
@@ -26,6 +27,7 @@ impl TrainingParams {
         tolerance: f64,
         batch_size: usize,
         use_adam: bool,
+        sample_match_percentage: f64,
     ) -> Self {
         Self {
             shape,
@@ -37,6 +39,7 @@ impl TrainingParams {
             tolerance,
             batch_size,
             use_adam,
+            sample_match_percentage,
         }
     }
 
@@ -83,6 +86,11 @@ impl TrainingParams {
     #[must_use]
     pub const fn use_adam(&self) -> bool {
         self.use_adam
+    }
+
+    #[must_use]
+    pub const fn sample_match_percentage(&self) -> f64 {
+        self.sample_match_percentage
     }
 
     pub fn set_shape(

@@ -18,6 +18,8 @@ struct Args {
     // insert the training params here
     #[clap(long, default_value = "0.1")]
     tolerance: f64,
+    #[clap(long, default_value = "1.0")]
+    sample_match_percentage: f64,
 
     // insert data importer params here
     #[clap(long)]
@@ -103,7 +105,10 @@ fn main() {
                 nb_correct_outputs += 1;
             }
         }
-        success_count += nb_correct_outputs as f64 / target.len() as f64;
+        let match_percentage = nb_correct_outputs as f64 / target.len() as f64;
+        if match_percentage >= args.sample_match_percentage {
+            success_count += 1.0;
+        }
     }
     wtr.flush().unwrap();
 

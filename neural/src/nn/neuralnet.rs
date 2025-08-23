@@ -742,6 +742,7 @@ impl TrainableNeuralNetwork for TrainableClassicNeuralNetwork {
         tolerance: f64,
         use_adam: bool,
         validation_split: f64,
+        sample_match_percentage: f64,
     ) -> f64 {
         // in case one does not have enough samples, don't train and return zero accuracy
         let (transformed_inputs, transformed_targets) = Self::transform(inputs, targets);
@@ -789,7 +790,10 @@ impl TrainableNeuralNetwork for TrainableClassicNeuralNetwork {
                 let target_len_f64: f64 =
                     NumCast::from(target.len()).expect("Failed to convert target.len() to f64");
 
-                success_count += correct_outputs_f64 / target_len_f64;
+                let match_percentage = correct_outputs_f64 / target_len_f64;
+                if match_percentage >= sample_match_percentage {
+                    success_count += 1.0;
+                }
                 // Calculate loss gradient
                 let grad_output: Vec<f64> = output
                     .iter()
@@ -837,7 +841,10 @@ impl TrainableNeuralNetwork for TrainableClassicNeuralNetwork {
                     .expect("Failed to convert correct_outputs to f64");
                 let target_len_f64: f64 =
                     NumCast::from(target.len()).expect("Failed to convert target.len() to f64");
-                validation_success_count += correct_outputs_f64 / target_len_f64;
+                let match_percentage = correct_outputs_f64 / target_len_f64;
+                if match_percentage >= sample_match_percentage {
+                    validation_success_count += 1.0;
+                }
 
                 validation_loss += output
                     .iter()
@@ -1024,7 +1031,7 @@ mod tests {
         let target = vec![0.0, 0.0, 0.0];
         let targets = vec![target; 200];
 
-        nn.train(&inputs, &targets, 0.01, 5, 0.1, true, 0.7);
+        nn.train(&inputs, &targets, 0.01, 5, 0.1, true, 0.7, 1.0);
 
         let prediction = nn.predict(inputs[0].clone());
         // print targets[0]

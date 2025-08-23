@@ -75,7 +75,7 @@ fn test_neural_network_generator() {
     };
 
     let training_params =
-        TrainingParams::new(nn_shape.clone(), None, None, 0.7, 0.01, 2, 0.1, 32, true);
+        TrainingParams::new(nn_shape.clone(), None, None, 0.7, 0.01, 2, 0.1, 32, true, 1.0);
 
     let data_importer = MockDataImporter::new(nn_shape.clone());
 

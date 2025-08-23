@@ -356,6 +356,7 @@ impl TrainableEitherNeuralNetwork {
         tolerance: f64,
         use_adam: bool,
         validation_split: f64,
+        sample_match_percentage: f64,
     ) -> (WrappedTrainableNeuralNetwork, f64) {
         let mut temp_nn = new_trainable_neural_network(NeuralNetworkCreationArguments::new(
             self.shape.clone(),
@@ -373,6 +374,7 @@ impl TrainableEitherNeuralNetwork {
             tolerance,
             use_adam,
             validation_split,
+            sample_match_percentage,
         );
 
         (temp_nn, acc)
@@ -399,6 +401,7 @@ impl TrainableEitherNeuralNetwork {
         inputs: &[Vec<f64>],
         targets: &[Vec<f64>],
         tolerance: f64,
+        sample_match_percentage: f64,
     ) -> ((Vec<Vec<f64>>, Vec<Vec<f64>>), (Vec<Vec<f64>>, Vec<Vec<f64>>)) {
         let (left_inputs, left_targets): (Vec<_>, Vec<_>) = inputs
             .iter()
@@ -414,7 +417,8 @@ impl TrainableEitherNeuralNetwork {
                         nb_correct += 1;
                     }
                 }
-                nb_correct == target.len()
+                let match_percentage = nb_correct as f64 / target.len() as f64;
+                match_percentage >= sample_match_percentage
             })
             .map(|(input, target, _)| (input.clone(), target.clone()))
             .unzip();
@@ -433,7 +437,8 @@ impl TrainableEitherNeuralNetwork {
                         nb_correct += 1;
                     }
                 }
-                nb_correct != target.len()
+                let match_percentage = nb_correct as f64 / target.len() as f64;
+                match_percentage < sample_match_percentage
             })
             .map(|(input, target, _)| (input.clone(), target.clone()))
             .unzip();
@@ -473,6 +478,7 @@ impl TrainableEitherNeuralNetwork {
         tolerance: f64,
         use_adam: bool,
         validation_split: f64,
+        sample_match_percentage: f64,
     ) -> (WrappedTrainableNeuralNetwork, f64) {
         let model_dir = append_dir(self.model_directory.path(), dir_name);
         let mut nn = new_trainable_neural_network(NeuralNetworkCreationArguments::new(
@@ -484,7 +490,7 @@ impl TrainableEitherNeuralNetwork {
         ));
 
         let acc =
-            nn.train(inputs, targets, learning_rate, epochs, tolerance, use_adam, validation_split);
+            nn.train(inputs, targets, learning_rate, epochs, tolerance, use_adam, validation_split, sample_match_percentage);
 
         let error_message = format!("Failed to save {dir_name} neural network");
         nn.save(model_dir).expect(&error_message);
@@ -582,6 +588,7 @@ impl TrainableNeuralNetwork for TrainableEitherNeuralNetwork {
         tolerance: f64,
         use_adam: bool,
         validation_split: f64,
+        sample_match_percentage: f64,
     ) -> f64 {
         if Self::not_enough_samples(inputs) {
             return 0.0;
@@ -595,6 +602,7 @@ impl TrainableNeuralNetwork for TrainableEitherNeuralNetwork {
             tolerance,
             use_adam,
             validation_split,
+            sample_match_percentage,
         );
 
         if self.no_more_levels() {
@@ -603,7 +611,7 @@ impl TrainableNeuralNetwork for TrainableEitherNeuralNetwork {
         }
 
         let ((left_inputs, left_targets), (right_inputs, right_targets)) =
-            Self::split_by_prediction(&mut temp_nn, inputs, targets, tolerance);
+            Self::split_by_prediction(&mut temp_nn, inputs, targets, tolerance, sample_match_percentage);
 
         if Self::too_few_mispredictions(&right_inputs) {
             self.save_pre_network(&temp_nn, "pre");
@@ -623,6 +631,7 @@ impl TrainableNeuralNetwork for TrainableEitherNeuralNetwork {
             tolerance,
             use_adam,
             validation_split,
+            sample_match_percentage,
         );
         self.pre_nn = pre_nn;
 
@@ -636,6 +645,7 @@ impl TrainableNeuralNetwork for TrainableEitherNeuralNetwork {
             tolerance,
             use_adam,
             validation_split,
+            sample_match_percentage,
         );
 
         let (_, right_accuracy) = self.train_and_save_network(
@@ -648,6 +658,7 @@ impl TrainableNeuralNetwork for TrainableEitherNeuralNetwork {
             tolerance,
             use_adam,
             validation_split,
+            sample_match_percentage,
         );
 
         left_accuracy + right_accuracy
@@ -753,7 +764,7 @@ mod tests {
         let target = vec![0.0, 0.0, 0.0];
         let targets = vec![target; 500];
 
-        nn.train(&inputs, &targets, 0.01, 5, 0.1, true, 0.7);
+        nn.train(&inputs, &targets, 0.01, 5, 0.1, true, 0.7, 1.0);
 
         let prediction = nn.predict(inputs[0].clone());
         // print targets[0]

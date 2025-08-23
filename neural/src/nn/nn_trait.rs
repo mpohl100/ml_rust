@@ -95,6 +95,7 @@ pub trait TrainableNeuralNetwork: NeuralNetwork {
         tolerance: f64,
         use_adam: bool,
         validation_split: f64,
+        sample_match_percentage: f64,
     ) -> f64;
 
     /// Trains the neural network doing batch back propagation.
@@ -161,6 +162,7 @@ impl WrappedTrainableNeuralNetwork {
         tolerance: f64,
         use_adam: bool,
         validation_split: f64,
+        sample_match_percentage: f64,
     ) -> f64 {
         safe_lock(&self.nn).train(
             inputs,
@@ -170,6 +172,7 @@ impl WrappedTrainableNeuralNetwork {
             tolerance,
             use_adam,
             validation_split,
+            sample_match_percentage,
         )
     }
 

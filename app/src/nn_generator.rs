@@ -43,6 +43,8 @@ struct Args {
     batch_size: usize,
     #[clap(long, default_value = "false")]
     use_adam: bool,
+    #[clap(long, default_value = "1.0")]
+    sample_match_percentage: f64,
 
     // insert the evolution options here
     #[clap(long, default_value = "100")]
@@ -91,6 +93,7 @@ impl Args {
                 self.tolerance,
                 self.batch_size,
                 self.use_adam,
+                self.sample_match_percentage,
             );
         }
         let shape = NeuralNetworkShape::from_file(self.shape_file.clone());
@@ -112,6 +115,7 @@ impl Args {
             self.tolerance,
             self.batch_size,
             self.use_adam,
+            self.sample_match_percentage,
         )
     }
 

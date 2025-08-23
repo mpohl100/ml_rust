@@ -119,7 +119,7 @@ impl TrainingSession {
             self.params.tolerance(),
             self.params.use_adam(),
             self.params.validation_split(),
-            // self.params.batch_size(),
+            self.params.sample_match_percentage(),
         );
 
         // Validation phase
@@ -150,7 +150,10 @@ impl TrainingSession {
                 NumCast::from(nb_correct_outputs).expect("Failed to convert to f64");
             let target_len_f64: f64 =
                 NumCast::from(target.len()).expect("Failed to convert target.len() to f64");
-            success_count += num_correct_outputs_f64 / target_len_f64;
+            let match_percentage = num_correct_outputs_f64 / target_len_f64;
+            if match_percentage >= self.params.sample_match_percentage() {
+                success_count += 1.0;
+            }
         }
         // Return the accuracy as the fraction of successful predictions
         let num_verification_samples_f64: f64 =
@@ -259,7 +262,7 @@ mod tests {
 
         // Define training parameters
         let training_params =
-            TrainingParams::new(nn_shape.clone(), None, None, 0.7, 0.01, 10, 0.1, 32, true);
+            TrainingParams::new(nn_shape.clone(), None, None, 0.7, 0.01, 10, 0.1, 32, true, 1.0);
 
         // Create a training session using the mock data importer
         let data_importer = MockDataImporter::new(nn_shape);

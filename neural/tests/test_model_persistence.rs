@@ -1,6 +1,6 @@
 use neural::nn::directory::Directory;
 use neural::nn::neuralnet::ClassicNeuralNetwork;
-use neural::nn::nn_trait::{NeuralNetwork, WrappedNeuralNetwork};
+use neural::nn::nn_trait::NeuralNetwork;
 use neural::nn::shape::NeuralNetworkShape;
 use neural::nn::shape::{ActivationData, ActivationType, LayerShape, LayerType};
 use neural::training::data_importer::{DataImporter, SessionData};
@@ -86,7 +86,7 @@ fn train_model(
 
     // Define training parameters
     let training_params =
-        TrainingParams::new(nn_shape.clone(), None, None, 0.7, 0.01, 3, 0.1, 32, true);
+        TrainingParams::new(nn_shape.clone(), None, None, 0.7, 0.01, 3, 0.1, 32, true, 1.0);
 
     // Create a training session using the mock data importer
     let data_importer = MockDataImporter::new(nn_shape);

@@ -425,6 +425,7 @@ impl TrainableNeuralNetwork for TrainableRetryNeuralNetwork {
         tolerance: f64,
         use_adam: bool,
         validation_split: f64,
+        sample_match_percentage: f64,
     ) -> f64 {
         // in case one does not have enough samples, don't train and return zero accuracy
         if inputs.len() < 100 {
@@ -443,6 +444,7 @@ impl TrainableNeuralNetwork for TrainableRetryNeuralNetwork {
             tolerance,
             use_adam,
             validation_split,
+            sample_match_percentage,
         );
 
         let (primary_inputs, primary_targets): (Vec<Vec<f64>>, Vec<Vec<f64>>) = inputs
@@ -461,7 +463,8 @@ impl TrainableNeuralNetwork for TrainableRetryNeuralNetwork {
                     }
                 }
                 let mut t = target.clone();
-                if nb_correct_outputs == target.len() {
+                let match_percentage = nb_correct_outputs as f64 / target.len() as f64;
+                if match_percentage >= sample_match_percentage {
                     t.push(0.0);
                 } else {
                     t.push(1.0);
@@ -479,6 +482,7 @@ impl TrainableNeuralNetwork for TrainableRetryNeuralNetwork {
             tolerance,
             use_adam,
             validation_split,
+            sample_match_percentage,
         );
 
         let (backup_inputs, backup_targets): (Vec<Vec<f64>>, Vec<Vec<f64>>) = primary_inputs
@@ -497,7 +501,8 @@ impl TrainableNeuralNetwork for TrainableRetryNeuralNetwork {
                     }
                 }
 
-                nb_correct_outputs == target.len()
+                let match_percentage = nb_correct_outputs as f64 / target.len() as f64;
+                match_percentage < sample_match_percentage
             })
             .map(|(input, target, _)| {
                 let mut t = target.clone();
@@ -514,6 +519,7 @@ impl TrainableNeuralNetwork for TrainableRetryNeuralNetwork {
             tolerance,
             use_adam,
             validation_split,
+            sample_match_percentage,
         );
 
         primary_accuracy + backup_accuracy
@@ -613,7 +619,7 @@ mod tests {
         let target = vec![0.0, 0.0, 0.0];
         let targets = vec![target; 500];
 
-        nn.train(&inputs, &targets, 0.01, 5, 0.1, true, 0.7);
+        nn.train(&inputs, &targets, 0.01, 5, 0.1, true, 0.7, 1.0);
 
         let prediction = nn.predict(inputs[0].clone());
         // print targets[0]
