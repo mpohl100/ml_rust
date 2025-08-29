@@ -9,10 +9,11 @@ use crate::provider::{
     WrappedExpectedValueProvider, WrappedProvider,
 };
 use crate::regret_node::{RegretNode, WrappedRegret};
-use crate::user_data::{UserDataTrait, WrappedUserData};
+use crate::user_data::{DecisionTrait, WrappedDecision};
+use serde::{Deserialize, Serialize};
 
 /// Enum representing choices in Rock-Paper-Scissors.
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 /// Enum representing choices in Rock-Paper-Scissors.
 pub enum Choice {
     /// The Rock move.
@@ -25,7 +26,7 @@ pub enum Choice {
 }
 
 /// User data for Rock-Paper-Scissors.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct RoshamboData {
     /// The chosen move.
     pub choice: Choice,
@@ -33,7 +34,7 @@ pub struct RoshamboData {
     pub probability: f64,
 }
 
-impl UserDataTrait for RoshamboData {
+impl DecisionTrait for RoshamboData {
     /// Returns the probability of this choice.
     fn get_probability(&self) -> f64 {
         self.probability
@@ -67,7 +68,7 @@ impl ChildrenProvider<RoshamboData> for RoshamboChildrenProvider {
     /// Returns the children nodes for Rock-Paper-Scissors.
     fn get_children(
         &self,
-        parents_data: Vec<WrappedUserData<RoshamboData>>,
+        parents_data: Vec<WrappedDecision<RoshamboData>>,
     ) -> Vec<WrappedRegret<RoshamboData>> {
         let probabilities = [0.4, 0.4, 0.2];
         match parents_data.len().cmp(&1) {
@@ -76,7 +77,7 @@ impl ChildrenProvider<RoshamboData> for RoshamboChildrenProvider {
                 for (i, choice) in
                     [Choice::Rock, Choice::Paper, Choice::Scissors].iter().enumerate()
                 {
-                    let data = WrappedUserData::new(RoshamboData {
+                    let data = WrappedDecision::new(RoshamboData {
                         choice: choice.clone(),
                         probability: probabilities[i],
                     });
@@ -101,7 +102,7 @@ impl ChildrenProvider<RoshamboData> for RoshamboChildrenProvider {
                 for (i, choice) in
                     [Choice::Rock, Choice::Paper, Choice::Scissors].iter().enumerate()
                 {
-                    let data = WrappedUserData::new(RoshamboData {
+                    let data = WrappedDecision::new(RoshamboData {
                         choice: choice.clone(),
                         probability: probabilities[i],
                     });
@@ -143,14 +144,14 @@ impl ExpectedValueProvider<RoshamboData> for RoshamboExpectedValueProvider {
     /// Returns the expected value for Rock-Paper-Scissors.
     fn get_expected_value(
         &self,
-        parents_data: Vec<WrappedUserData<RoshamboData>>,
+        parents_data: Vec<WrappedDecision<RoshamboData>>,
     ) -> f64 {
         assert!(
             parents_data.len() >= 2,
             "Expected at least two parents data for expected value calculation"
         );
-        let player_1_choice = &parents_data[parents_data.len() - 2].get_user_data().choice;
-        let player_2_choice = &parents_data[parents_data.len() - 1].get_user_data().choice;
+        let player_1_choice = &parents_data[parents_data.len() - 2].get_decision_data().choice;
+        let player_2_choice = &parents_data[parents_data.len() - 1].get_decision_data().choice;
         match player_1_choice {
             Choice::Rock => match player_2_choice {
                 Choice::Rock => 0.0,     // Tie

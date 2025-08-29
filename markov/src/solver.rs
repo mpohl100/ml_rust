@@ -7,8 +7,8 @@ use regret::provider::WrappedProvider;
 use regret::provider::{ChildrenProvider, ExpectedValueProvider};
 use regret::regret_node::RegretNode;
 use regret::regret_node::WrappedRegret;
-use regret::user_data::UserDataTrait;
-use regret::user_data::WrappedUserData;
+use regret::user_data::DecisionTrait;
+use regret::user_data::WrappedDecision;
 
 use num_traits::cast::NumCast;
 
@@ -38,7 +38,7 @@ impl<State: StateTrait> MarkovUserData<State> {
     }
 }
 
-impl<State: StateTrait> UserDataTrait for MarkovUserData<State> {
+impl<State: StateTrait> DecisionTrait for MarkovUserData<State> {
     fn get_probability(&self) -> f64 {
         self.probability
     }
@@ -76,7 +76,7 @@ impl<State: StateTrait + 'static> ChildrenProvider<MarkovUserData<State>>
 {
     fn get_children(
         &self,
-        parents_data: Vec<WrappedUserData<MarkovUserData<State>>>,
+        parents_data: Vec<WrappedDecision<MarkovUserData<State>>>,
     ) -> Vec<WrappedRegret<MarkovUserData<State>>> {
         let all_states_len_f64: f64 = NumCast::from(self.all_states.len()).unwrap();
         let probability = 1.0 / all_states_len_f64;
@@ -86,7 +86,7 @@ impl<State: StateTrait + 'static> ChildrenProvider<MarkovUserData<State>>
                 .all_states
                 .iter()
                 .map(|state| {
-                    let data = WrappedUserData::new(MarkovUserData::new(state.clone()));
+                    let data = WrappedDecision::new(MarkovUserData::new(state.clone()));
                     let new_children_provider =
                         Box::new(Self::new(self.all_states.clone(), self.expected_value_calc_func));
                     let provider = Provider::new(
@@ -107,7 +107,7 @@ impl<State: StateTrait + 'static> ChildrenProvider<MarkovUserData<State>>
                 .all_states
                 .iter()
                 .map(|state| {
-                    let data = WrappedUserData::new(MarkovUserData::new(state.clone()));
+                    let data = WrappedDecision::new(MarkovUserData::new(state.clone()));
                     let new_expected_value_provider =
                         Box::new(MarkovExpectedValueProvider::new(self.expected_value_calc_func));
                     let provider = Provider::new(
@@ -150,14 +150,14 @@ impl<State: StateTrait> ExpectedValueProvider<MarkovUserData<State>>
 {
     fn get_expected_value(
         &self,
-        parents_data: Vec<WrappedUserData<MarkovUserData<State>>>,
+        parents_data: Vec<WrappedDecision<MarkovUserData<State>>>,
     ) -> f64 {
         let state_last = parents_data
             .last()
             .expect("Expected at least one parent data")
-            .get_user_data()
+            .get_decision_data()
             .get_state();
-        let state_prev = parents_data[parents_data.len() - 2].get_user_data().get_state();
+        let state_prev = parents_data[parents_data.len() - 2].get_decision_data().get_state();
         let last_expected_value = (self.expected_value_calc_func)(&state_last);
         let prev_expected_value = (self.expected_value_calc_func)(&state_prev);
         last_expected_value - prev_expected_value
@@ -216,14 +216,14 @@ impl<State: StateTrait> MarkovSolver<State> {
                     .states
                     .iter()
                     .position(|s| {
-                        s == &first_child.get_user_data().unwrap().get_user_data().get_state()
+                        s == &first_child.get_user_data().unwrap().get_decision_data().get_state()
                     })
                     .unwrap();
                 let next_state_index = self
                     .states
                     .iter()
                     .position(|s| {
-                        s == &second_child.get_user_data().unwrap().get_user_data().get_state()
+                        s == &second_child.get_user_data().unwrap().get_decision_data().get_state()
                     })
                     .unwrap();
                 self.transition_matrix.set_val_unchecked(

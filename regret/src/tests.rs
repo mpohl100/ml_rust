@@ -4,7 +4,7 @@ use crate::provider::ExpectedValueProvider;
 use crate::provider::{Provider, ProviderType, WrappedChildrenProvider, WrappedProvider};
 use crate::regret_node::RegretNode;
 use crate::roshambo::*;
-use crate::user_data::WrappedUserData;
+use crate::user_data::WrappedDecision;
 
 /// Test for children provider in Rock-Paper-Scissors.
 #[test]
@@ -20,8 +20,8 @@ fn test_roshambo_children_provider() {
 fn test_roshambo_expected_value_provider() {
     let provider = RoshamboExpectedValueProvider::new();
     let parents_data = vec![
-        WrappedUserData::new(RoshamboData { choice: Choice::Rock, probability: 0.333 }),
-        WrappedUserData::new(RoshamboData { choice: Choice::Paper, probability: 0.333 }),
+        WrappedDecision::new(RoshamboData { choice: Choice::Rock, probability: 0.333 }),
+        WrappedDecision::new(RoshamboData { choice: Choice::Paper, probability: 0.333 }),
     ];
     let expected_value = provider.get_expected_value(parents_data);
     assert!((expected_value + 1.0).abs() < f64::EPSILON, "Paper beats Rock");

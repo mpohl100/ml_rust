@@ -15,6 +15,7 @@
     clippy::missing_errors_doc,
     clippy::missing_panics_doc
 )]
+pub mod percentage_tree;
 pub mod provider;
 pub mod regret_node;
 pub mod roshambo;

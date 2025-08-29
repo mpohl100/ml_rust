@@ -5,13 +5,13 @@
 //! regret minimization algorithms.
 
 use crate::provider::{ProviderType, WrappedProvider};
-use crate::user_data::{UserDataTrait, WrappedUserData};
+use crate::user_data::{DecisionTrait, WrappedDecision};
 use std::sync::{Arc, Mutex};
 use utils::safer::safe_lock;
 
 /// Represents a node in the regret minimization tree.
-#[derive(Clone)]
-pub struct RegretNode<UserData: UserDataTrait> {
+#[derive(Debug, Clone)]
+pub struct RegretNode<Decision: DecisionTrait> {
     /// Probability of this node.
     probability: f64,
     /// Minimum allowed probability.
@@ -19,11 +19,11 @@ pub struct RegretNode<UserData: UserDataTrait> {
     /// Current expected value of this node.
     current_expected_value: f64,
     /// Data from parent nodes.
-    parents_data: Vec<WrappedUserData<UserData>>,
+    parents_data: Vec<WrappedDecision<Decision>>,
     /// Provider for children or expected value.
-    provider: WrappedProvider<UserData>,
+    provider: WrappedProvider<Decision>,
     /// Child nodes.
-    children: Vec<WrappedRegret<UserData>>,
+    children: Vec<WrappedRegret<Decision>>,
     /// Regret value for this node.
     regret: f64,
     /// Sum of probabilities over iterations.
@@ -42,21 +42,21 @@ pub struct RegretNode<UserData: UserDataTrait> {
     fixed_probability: Option<f64>,
 }
 
-impl<UserData: UserDataTrait> RegretNode<UserData> {
+impl<Decision: DecisionTrait> RegretNode<Decision> {
     /// Creates a new regret node.
     #[must_use]
     pub fn new(
         probability: f64,
         min_probability: f64,
-        parents_data: Vec<WrappedUserData<UserData>>,
-        provider: WrappedProvider<UserData>,
+        parents_data: Vec<WrappedDecision<Decision>>,
+        provider: WrappedProvider<Decision>,
         fixed_probability: Option<f64>,
     ) -> Self {
         provider.get_user_data().as_mut().map_or_else(
             || {
                 // If no user data is provided, we set the probability to 0.0
-                UserData::set_probability(
-                    &mut UserData::default(),
+                Decision::set_probability(
+                    &mut Decision::default(),
                     fixed_probability.unwrap_or(1.0),
                 );
             },
@@ -260,6 +260,7 @@ impl<UserData: UserDataTrait> RegretNode<UserData> {
                 .iter()
                 .map(|child| child.calculate_expected_value() * child.get_probability())
                 .sum::<f64>(),
+            ProviderType::None => 0.0, // Terminal node has zero expected value
         };
         self.current_expected_value
     }
@@ -281,13 +282,13 @@ impl<UserData: UserDataTrait> RegretNode<UserData> {
 
     /// Returns the children of this node.
     #[must_use]
-    pub fn get_children(&self) -> Vec<WrappedRegret<UserData>> {
+    pub fn get_children(&self) -> Vec<WrappedRegret<Decision>> {
         self.children.clone()
     }
 
     /// Returns the user data associated with this node.
     #[must_use]
-    pub fn get_user_data(&self) -> Option<WrappedUserData<UserData>> {
+    pub fn get_user_data(&self) -> Option<WrappedDecision<Decision>> {
         self.provider.get_user_data()
     }
 
@@ -310,7 +311,9 @@ impl<UserData: UserDataTrait> RegretNode<UserData> {
                     child.populate_children();
                 });
             },
-            ProviderType::ExpectedValue(_) => {},
+            ProviderType::ExpectedValue(_) | ProviderType::None => {
+                // Expected value and terminal nodes have no children to populate
+            },
         }
     }
 
@@ -339,16 +342,16 @@ impl<UserData: UserDataTrait> RegretNode<UserData> {
 }
 
 /// Thread-safe wrapper for a `RegretNode`.
-#[derive(Clone)]
-pub struct WrappedRegret<UserData: UserDataTrait> {
+#[derive(Debug, Clone)]
+pub struct WrappedRegret<Decision: DecisionTrait> {
     /// The underlying regret node, wrapped in Arc<Mutex>.
-    node: Arc<Mutex<RegretNode<UserData>>>,
+    node: Arc<Mutex<RegretNode<Decision>>>,
 }
 
-impl<UserData: UserDataTrait> WrappedRegret<UserData> {
+impl<Decision: DecisionTrait> WrappedRegret<Decision> {
     /// Creates a new wrapped regret node.
     #[must_use]
-    pub fn new(node: RegretNode<UserData>) -> Self {
+    pub fn new(node: RegretNode<Decision>) -> Self {
         Self { node: Arc::new(Mutex::new(node)) }
     }
 
@@ -372,7 +375,7 @@ impl<UserData: UserDataTrait> WrappedRegret<UserData> {
 
     /// Returns the user data associated with the node.
     #[must_use]
-    pub fn get_user_data(&self) -> Option<WrappedUserData<UserData>> {
+    pub fn get_user_data(&self) -> Option<WrappedDecision<Decision>> {
         safe_lock(&self.node).get_user_data()
     }
 
